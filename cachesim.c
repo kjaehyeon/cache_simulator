@@ -224,8 +224,8 @@ void cache_write(char addr[], int data){//write to cache
 	
 	setnum = cache_read(addr);//get set number to write	
 
-	cache[setnum][addinfo.index].data[addinfo.blockoff] &= ~(1 << (addinfo.byteoff *2));
-	cache[setnum][addinfo.index].data[addinfo.blockoff] &= ~(1 <<(addinfo.byteoff *2 +1));
+	cache[setnum][addinfo.index].data[addinfo.blockoff] &= ~(1 << (addinfo.byteoff *2*4));
+	cache[setnum][addinfo.index].data[addinfo.blockoff] &= ~(1 <<(addinfo.byteoff *2*4 +1));
 
 	cache[setnum][addinfo.index].data[addinfo.blockoff] += (data << (addinfo.byteoff *2*4));
 	printf("write data : %08X\n",cache[setnum][addinfo.index].data[addinfo.blockoff]);
