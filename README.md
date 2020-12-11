@@ -5,11 +5,14 @@
 - 각 argument의미  
   -s=cache size
   
-  -b=block size 
+  -b=block size
+  
   -a=set size
+  
   -f=trace file name
+
 - 출력형식
-0: 00000001 00000001 v:1 d:1\
+0: 00000001 00000001 v:1 d:1\n
    00000002 FFFC1100 v:1 d:0
 1: 00000003 00000001 v:1 d:1
    0005FD04 00000001 v:1 d:0
