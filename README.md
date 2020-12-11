@@ -4,6 +4,7 @@
 ./cachesim -a=2 -s=64 -b=8 -f=sample.trc
 - 각 argument의미  
   -s=cache size
+  
   -b=block size 
   -a=set size
   -f=trace file name
