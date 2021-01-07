@@ -12,17 +12,17 @@
   -f=trace file name
 
 - 출력형식
-0: 00000001 00000001 v:1 d:1
-   00000002 FFFC1100 v:1 d:0
-1: 00000003 00000001 v:1 d:1
-   0005FD04 00000001 v:1 d:0
-2: 00000000 00000001 v:0 d:1
-   00000001 01100001 v:1 d:1
-3: ABAB0022 00011111 v:1 d:0
-   11100001 00000001 v:1 d:1
+0: 00000001 00000001 v:1 d:1<br>
+   00000002 FFFC1100 v:1 d:0<br>
+1: 00000003 00000001 v:1 d:1<br>
+   0005FD04 00000001 v:1 d:0<br>
+2: 00000000 00000001 v:0 d:1<br>
+   00000001 01100001 v:1 d:1<br>
+3: ABAB0022 00011111 v:1 d:0<br>
+   11100001 00000001 v:1 d:1<br>
  
-total number of hits: 234
-total number of misses: 31
-miss rate: 11.7%
-total number of dirty blocks: 4
-average memory access cycle: 29.4
+total number of hits: 234<br>
+total number of misses: 31<br>
+miss rate: 11.7%<br>
+total number of dirty blocks: 4<br>
+average memory access cycle: 29.4<br>
