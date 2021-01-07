@@ -26,3 +26,5 @@ total number of misses: 31<br>
 miss rate: 11.7%<br>
 total number of dirty blocks: 4<br>
 average memory access cycle: 29.4<br>
+
+※ v = valid bit,  d = dirty bit
