@@ -44,5 +44,7 @@ int main(void){
 	a = a >> 2;
 	a = a << 2;
 	printf("%d\n",a);
+
+	printf("%0.1f %0.1f\n", 5.53, 5.57+0.05);
 }
 

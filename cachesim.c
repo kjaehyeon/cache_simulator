@@ -6,6 +6,7 @@
 
 int totalhit = 0;
 int totalmiss = 0;
+int total_mem_access = 0;
 int time_count = 0;
 typedef struct _cacheEnt{
 	bool valbit;
@@ -37,7 +38,7 @@ char* adjarg(char str[]){
 	tmpstr = str +1;	
 	return tmpstr;	
 }
-int log2(int num){
+int log_2(int num){
 	int count = 0;
 	while(num/2 != 0){
 		num = num/2;
@@ -48,7 +49,6 @@ int log2(int num){
 int get_victim(parsedAdd addinfo){//find victim set number for spill
 	int min = cache[0][addinfo.index].time;
 	int setnum = 0;
-
 	for(int i = 1; i < snum; i++){
 		if(cache[i][addinfo.index].time < min){
 			setnum = i;
@@ -57,15 +57,14 @@ int get_victim(parsedAdd addinfo){//find victim set number for spill
 	}
 	return setnum;
 }
-parsedAdd parsingAdd(char addr[]){//parsing string type address and get info
+parsedAdd parsingAdd(char addr[]){//parsing string type address to get information
 	unsigned int address = strtoul(addr, NULL,16);
 	unsigned int mask = 1;
 	parsedAdd tmp;
 	int bytedigit = 2;
-	int blockdigit = log2(bsiz/4);
-	int idxdigit = log2((csiz/snum)/bsiz);
+	int blockdigit = log_2(bsiz/4);
+	int idxdigit = log_2((csiz/snum)/bsiz);
 	int tagdigit = 32 - bytedigit - blockdigit - idxdigit;
-	printf("%d %d %d %d\n",bytedigit, blockdigit, idxdigit,tagdigit);	
 	tmp.byteoff = 0;
 	for(int i = 0; i < bytedigit; i++){
 		tmp.byteoff += address & mask;
@@ -119,9 +118,10 @@ void printCache(cacheEnt **cache){
 void mem_read(char addr[], int setnum, parsedAdd addinfo){
 	memoryPointer tmp, ptr;
 	unsigned int iaddr = strtoul(addr, NULL, 16);
-	
-	iaddr = iaddr >> (2+log2(bsiz/4));//cut byteoffset and blockoffset bit
-	iaddr = iaddr << (2+log2(bsiz/4));	
+	total_mem_access++;
+
+	iaddr = iaddr >> (2+log_2(bsiz/4));//cut byteoffset and blockoffset bit
+	iaddr = iaddr << (2+log_2(bsiz/4));	
 	if(memory == NULL){//if memory is empty
 		memory = (memoryPointer)malloc(sizeof(memoryEnt));
 		memory->data = (int*)calloc(bsiz/4, sizeof(int));
@@ -136,7 +136,7 @@ void mem_read(char addr[], int setnum, parsedAdd addinfo){
 	}
 	else{
 		ptr = memory;
-		while( ((ptr->address) >> (2+log2(bsiz/4)))  != iaddr >>  (2+log2(bsiz/4)) ){
+		while( ((ptr->address) >> (2+log_2(bsiz/4)))  != iaddr >>  (2+log_2(bsiz/4)) ){
 			ptr = ptr->link;
 			if(ptr == NULL) break;
 		}
@@ -170,17 +170,33 @@ void mem_read(char addr[], int setnum, parsedAdd addinfo){
 	}
 		
 }
-void mem_write(char addr[], int setnum, parsedAdd addinfo){
+void mem_write(int setnum, parsedAdd addinfo){
 	//kick out the victim (cache to memory)
 	memoryPointer ptr = memory;
-	unsigned int iaddr = strtoul(addr, NULL, 16);
+	int bytedigit = 2;
+	int blockdigit = log_2(bsiz/4);
+	int idxdigit = log_2((csiz/snum)/bsiz);
+	unsigned int iaddr = 0;
+	total_mem_access++;
+
+	iaddr += cache[setnum][addinfo.index].tag << (bytedigit + blockdigit + idxdigit);
+	iaddr += addinfo.index << (bytedigit + blockdigit);
+
+	while(ptr != NULL){
+		if(ptr->address == iaddr) break;
+		ptr = ptr->link;
+	}
+
+	if(ptr == NULL){
+		fprintf(stderr,"mem_write err\n");
+		exit(1);
+	}
 	
-	iaddr = iaddr >> (2+log2(bsiz/4));//cut byteoffset and blockoffset bit
-	iaddr = iaddr << (2+log2(bsiz/4));
-	
-	//while(ptr->
+	memcpy(ptr->data, cache[setnum][addinfo.index].data, sizeof(int)*(bsiz/4));
+
 
 }
+
 int cache_read(char addr[]){//read from cache
 	parsedAdd addinfo = parsingAdd(addr);
 	int setnum = 0;
@@ -193,7 +209,7 @@ int cache_read(char addr[]){//read from cache
 	
 	if(setnum < snum){//hit!
 		totalhit++;
-		cache[setnum][addinfo.index].time = time_count++;	
+		//cache[setnum][addinfo.index].time = time_count++;	
 		return setnum;
 	}else{//miss..
 		totalmiss++;
@@ -208,10 +224,9 @@ int cache_read(char addr[]){//read from cache
 			return setnum;
 		}
 		else{//need to spill
-			printf("spill\n");
 			setnum = get_victim(addinfo);
 			if(cache[setnum][addinfo.index].dirbit == true)
-				mem_write(addr,setnum,addinfo);
+				mem_write(setnum,addinfo);
 			mem_read(addr, setnum, addinfo);
 			return setnum;
 		}
@@ -228,9 +243,8 @@ void cache_write(char addr[], int data){//write to cache
 	cache[setnum][addinfo.index].data[addinfo.blockoff] &= ~(1 <<(addinfo.byteoff *2*4 +1));
 
 	cache[setnum][addinfo.index].data[addinfo.blockoff] += (data << (addinfo.byteoff *2*4));
-	printf("write data : %08X\n",cache[setnum][addinfo.index].data[addinfo.blockoff]);
 	cache[setnum][addinfo.index].dirbit = true;
-	cache[setnum][addinfo.index].time = time_count++;
+	//cache[setnum][addinfo.index].time = time_count++;
 
 }
 void print_mem(){
@@ -238,14 +252,37 @@ void print_mem(){
 	ptr = memory;
 	printf("<memory>\n");
 	while(ptr != NULL){
-		printf("%08X %08X %08X\n",ptr->address, ptr->data[0], ptr->data[1]);
+		printf("%08X ",ptr->address);
+		for(int i = 0; i < bsiz/4; i++)
+			printf("%08X ",ptr->data[i]);
+		printf("\n");
 		ptr = ptr->link;
 	}
+}
+void print_result(){
+	int ssiz = csiz/snum; // set size
+	int idxnum = ssiz/bsiz; // index number	
+	double missrate = (double)totalmiss/(double)(totalhit+totalmiss) * 100.0;
+	int dirty_num = 0;
+	double ic = totalhit + totalmiss;
+	for(int i = 0; i < ssiz; i++)
+		for(int j = 0; j < idxnum; j++)
+			if(cache[i][j].dirbit == true
+				       	&& cache[i][j].valbit == true) dirty_num++;
+
+	putchar('\n');
+	printf("total number of hits: %d\n",totalhit);
+	printf("total number of misses: %d\n", totalmiss);
+	printf("miss rate: %0.1f%%\n", missrate + 0.05);
+	printf("total number of dirty blocks: %d\n", dirty_num );
+	printf("average memory access cycle: %0.1f\n"
+			,(ic+(total_mem_access*200.0))/ic);
+
+
 }
 int main(int argc, char* argv[]){
 	//cache[set_number][index_number]
 	// csiz = cache size, bsiz = block size, snum = set num
-	int ssiz, idxnum;
 	char *filename;
 	char opt;
 	extern char *optarg;
@@ -267,7 +304,6 @@ int main(int argc, char* argv[]){
 			break;
 		}
 	}
-	printf("s:%d b:%d a:%d f:%s\n",csiz,bsiz,snum,filename);
 	creatCache();
 	
 	fp = fopen(filename, "r");
@@ -278,15 +314,16 @@ int main(int argc, char* argv[]){
 		fscanf(fp, "%s %c ",addr, &cmd);
 		if(cmd == 'W'){
 			fscanf(fp,"%d ",&data);
-			if(data > 128)
-				fprintf(stderr,"data is too big\n");
-			printf("%s %c %d\n",addr, cmd, data);
+			if(data > 256){
+				fprintf(stderr,"data should smaller than 255\n");
+				exit(1);
+			}
 			cache_write(addr, data);
 		}else if(cmd == 'R'){
 			cache_read(addr);
-			printf("%s %c\n",addr, cmd);
 		}
 	}
 	printCache(cache);
-	print_mem();
+//	print_mem();
+	print_result();
 }
